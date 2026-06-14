@@ -44,6 +44,25 @@ function orient(nx: number, ny: number, idx: number) {
   return { x, y };
 }
 
+// 검출 원(정규화) → 화면 px. 회전(orient) + 프리뷰 cover-crop 보정.
+// aspect = 센서 프레임 가로/세로. nr은 프레임 폭 기준 정규화.
+function frameToScreen(
+  c: { nx: number; ny: number; nr: number },
+  aspect: number,
+  idx: number,
+  W: number,
+  H: number,
+) {
+  const m = orient(c.nx, c.ny, idx);
+  const disp = idx & 1 ? 1 / aspect : aspect; // 표시 프레임 가로/세로
+  const sA = W / H; // 화면 가로/세로
+  const s = Math.max(sA / disp, 1); // cover 스케일(화면단위)
+  const ux = (m.x * disp - disp / 2) * s + sA / 2;
+  const uy = (m.y - 0.5) * s + 0.5;
+  const ppu = (s / sA) * W; // 프레임단위당 px(등방)
+  return { x: (ux / sA) * W, y: uy * H, r: c.nr * disp * ppu };
+}
+
 const stateColor: Record<FitState, string> = {
   idle: colors.idle,
   near: colors.near,
@@ -66,7 +85,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
   const device = useCameraDevice(position);
   const cameraRef = useRef<Camera>(null);
   const circle = useCircle(width, height);
-  const { frameProcessor, subjectRef } = useCircleDetector();
+  const { frameProcessor, detectionRef } = useCircleDetector();
 
   // circle은 매 렌더 새 객체 → ref로 고정해 인터벌 재생성을 막는다
   const circleRef = useRef(circle);
@@ -84,17 +103,35 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
       return;
     }
     const id = setInterval(() => {
-      const s = subjectRef.current;
+      const det = detectionRef.current;
       const c = circleRef.current.snapshot();
-      if (!s) {
+      if (!det || det.circles.length === 0) {
         wasGood.current = false;
         setFit({ score: 0, state: 'idle', hint: '' });
         setGhost(null);
         return;
       }
-      const mapped = orient(s.nx, s.ny, orientRef.current);
-      const subj = { px: mapped.x * width, py: mapped.y * height, pr: s.nr * Math.min(width, height) };
-      setGhost({ x: subj.px, y: subj.py, r: subj.pr });
+      // 검출된 원들을 화면 좌표로 변환 → 내 가이드 원에 '가장 가까운' 원 선택
+      const minSide = Math.min(width, height);
+      let best: { x: number; y: number; r: number } | null = null;
+      let bestD = Infinity;
+      for (const cc of det.circles) {
+        const m = frameToScreen(cc, det.aspect, orientRef.current, width, height);
+        if (m.r < 14 || m.r > minSide) continue; // 비현실적 크기 제외
+        const d = Math.hypot(m.x - c.cx, m.y - c.cy);
+        if (d < bestD) {
+          bestD = d;
+          best = m;
+        }
+      }
+      if (!best) {
+        wasGood.current = false;
+        setFit({ score: 0, state: 'idle', hint: '' });
+        setGhost(null);
+        return;
+      }
+      setGhost(best);
+      const subj = { px: best.x, py: best.y, pr: best.r };
       const f = computeFit({ cx: c.cx, cy: c.cy, r: c.r }, subj);
       const dx = subj.px - c.cx;
       const dy = subj.py - c.cy;
@@ -108,7 +145,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
       setFit({ score: f.score, state: f.state, hint });
     }, 90);
     return () => clearInterval(id);
-  }, [guide, width, height, subjectRef]);
+  }, [guide, width, height, detectionRef]);
 
   if (!hasPermission) {
     return (
