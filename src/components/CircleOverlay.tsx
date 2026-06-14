@@ -23,6 +23,8 @@ export interface CircleOverlayProps {
   fit?: number;
   /** 원 중앙 힌트 텍스트 (방향/✓) */
   hint?: string;
+  /** 검출된 둥근 물체(화면 좌표) — 점선 고스트 링으로 표시 */
+  detected?: { x: number; y: number; r: number } | null;
   vignette?: boolean;
   showGrid?: boolean;
   interactive?: boolean;
@@ -36,6 +38,7 @@ export default function CircleOverlay({
   color = colors.idle,
   fit,
   hint,
+  detected,
   vignette = false,
   showGrid = false,
   interactive = true,
@@ -111,6 +114,20 @@ export default function CircleOverlay({
                 strokeLinecap="round"
               />
             </>
+          )}
+
+          {/* 검출된 둥근 물체 (점선 고스트) */}
+          {detected && (
+            <Circle
+              cx={detected.x}
+              cy={detected.y}
+              r={detected.r}
+              fill="none"
+              stroke={colors.accent}
+              strokeWidth={2}
+              strokeDasharray={[7, 7]}
+              opacity={0.9}
+            />
           )}
 
           {/* 가이드 원 */}

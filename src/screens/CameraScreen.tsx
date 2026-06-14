@@ -11,9 +11,9 @@ import {
 import CircleOverlay from '../components/CircleOverlay';
 import { BlurBar, Pill, PillButton, RoundIconButton, Shutter, Tip } from '../components/ui';
 import { computeFit, type FitState } from '../lib/match';
+import { useCircleDetector } from '../lib/useCircleDetector';
 import { useCircle } from '../lib/useCircle';
 import type { Settings } from '../lib/useSettings';
-import { useSubjectDetector } from '../lib/useSubjectDetector';
 import { colors, ratios, space } from '../theme';
 
 interface Props {
@@ -61,11 +61,12 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
     state: 'idle',
     hint: '',
   });
+  const [ghost, setGhost] = useState<{ x: number; y: number; r: number } | null>(null);
 
   const device = useCameraDevice(position);
   const cameraRef = useRef<Camera>(null);
   const circle = useCircle(width, height);
-  const { frameProcessor, subjectRef } = useSubjectDetector();
+  const { frameProcessor, subjectRef } = useCircleDetector();
 
   // circle은 매 렌더 새 객체 → ref로 고정해 인터벌 재생성을 막는다
   const circleRef = useRef(circle);
@@ -79,6 +80,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
     if (!guide) {
       wasGood.current = false;
       setFit({ score: 0, state: 'idle', hint: '' });
+      setGhost(null);
       return;
     }
     const id = setInterval(() => {
@@ -87,10 +89,12 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
       if (!s) {
         wasGood.current = false;
         setFit({ score: 0, state: 'idle', hint: '' });
+        setGhost(null);
         return;
       }
       const mapped = orient(s.nx, s.ny, orientRef.current);
       const subj = { px: mapped.x * width, py: mapped.y * height, pr: s.nr * Math.min(width, height) };
+      setGhost({ x: subj.px, y: subj.py, r: subj.pr });
       const f = computeFit({ cx: c.cx, cy: c.cy, r: c.r }, subj);
       const dx = subj.px - c.cx;
       const dy = subj.py - c.cy;
@@ -172,6 +176,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
         color={color}
         fit={guide ? fit.score : undefined}
         hint={guide ? fit.hint : ''}
+        detected={guide ? ghost : null}
       />
 
       {/* 상단 HUD */}
@@ -200,7 +205,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
             <RoundIconButton icon="◎" active={guide} onPress={() => update({ guide: !guide })} />
             <RoundIconButton icon="⟲" onPress={() => setPosition((p) => (p === 'back' ? 'front' : 'back'))} />
           </View>
-          <Tip>원 끌어 위치 · 핀치/핸들 크기 · ◎ 가이드 · 화살표가 반대면 상단 '방향' 탭</Tip>
+          <Tip>◎ 둥근 물체 자동 인식(점선) · 원을 거기 맞추면 초록 · 방향 어긋나면 상단 '방향' 탭</Tip>
         </BlurBar>
         <View style={styles.loadRow}>
           <PillButton label="🖼  갤러리에서 보정" onPress={openLibrary} />
