@@ -13,16 +13,41 @@
 
 ## 현재 상태
 
-- 단계: **설계 (Design)** — 코드 구현 전, 기획/설계 문서 정리 단계
-- 1차 타겟 플랫폼: **웹 프로토타입** (브라우저 `getUserMedia` + `canvas`)
-- 향후: iOS 네이티브(SwiftUI + AVFoundation + Vision)로 확장 고려
+- 단계: **M1 구현 (React Native)** — 카메라+원 오버레이+수동촬영+후보정
+- 플랫폼: **iOS · Android 공용** — React Native (Expo) + react-native-vision-camera
+- 다음: L2 정렬 가이드(원 주변 ROI 실시간 인식)
+
+## 실행 (요약)
+
+```bash
+npm install
+npx expo install --fix
+npx expo prebuild
+npx expo run:android   # 갤럭시
+npx expo run:ios       # 아이폰 (Mac 필요)
+```
+자세한 내용은 [docs/BUILD.md](docs/BUILD.md).
 
 ## 문서
 
-- [docs/mockup.html](docs/mockup.html) — 인터랙티브 UI 목업(원 드래그·정렬 게이지·후보정 모드) + 기능 설명
+- [docs/BUILD.md](docs/BUILD.md) — iPhone·Galaxy 빌드/실행 가이드
+- [docs/mockup.html](docs/mockup.html) — 인터랙티브 UI 목업 + 기능 설명
 - [docs/DESIGN.md](docs/DESIGN.md) — 제품/기술 설계 전체
 - [docs/COMPETITORS.md](docs/COMPETITORS.md) — 기존 앱·기능 조사 및 차별점
 - [docs/ROADMAP.md](docs/ROADMAP.md) — 단계별 범위(L1→L2→L3)와 마일스톤
+
+## 코드 구조
+
+```
+App.tsx                    화면 전환(camera/preview/edit)
+index.ts                   진입점
+src/screens/CameraScreen   프리뷰 + 원 오버레이 + 수동 셔터
+src/screens/PreviewScreen  촬영 결과 저장/공유/후보정 이동
+src/screens/EditScreen     사진 불러와 원 프레이밍·비네팅 → 내보내기
+src/components/CircleOverlay  드래그·핀치 원(SVG + Reanimated), 공용
+src/lib/match.ts           정렬 fit 계산 (L2에서 사용)
+src/theme.ts               색·비율 상수
+```
 
 ## 핵심 차별점
 

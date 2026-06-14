@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Circle Camera",
+    "slug": "circle-camera",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.circlecamera.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "원 안에 피사체를 맞춰 촬영하기 위해 카메라를 사용합니다.",
+        "NSPhotoLibraryAddUsageDescription": "촬영/보정한 사진을 사진 앱에 저장하기 위해 사용합니다.",
+        "NSPhotoLibraryUsageDescription": "후보정할 사진을 불러오기 위해 사용합니다."
+      }
+    },
+    "android": {
+      "package": "com.circlecamera.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
+    },
+    "plugins": [
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "원 안에 피사체를 맞춰 촬영하기 위해 카메라를 사용합니다."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "후보정할 사진을 불러오기 위해 갤러리 접근을 허용해 주세요."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "촬영/보정한 사진을 사진 앱에 저장합니다.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
+    ]
+  }
+}
