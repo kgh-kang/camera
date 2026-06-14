@@ -39,6 +39,14 @@
     },
     "plugins": [
       [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ],
+      [
         "react-native-vision-camera",
         {
           "cameraPermissionText": "원 안에 피사체를 맞춰 촬영하기 위해 카메라를 사용합니다."
