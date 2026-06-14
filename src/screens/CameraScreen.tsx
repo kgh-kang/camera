@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
@@ -23,8 +23,26 @@ interface Props {
   update: (patch: Partial<Settings>) => void;
 }
 
-// 프레임 좌표 → 화면 좌표 보정 (실기기에서 회전/미러 느낌이면 여기만 바꾸면 됨)
-const ORIENT = { rotate: true, mirror: false };
+// 프레임 정규화좌표 → 화면 정규화좌표 (8가지: 회전 4 × 미러 2). 사용자가 버튼으로 맞춤.
+function orient(nx: number, ny: number, idx: number) {
+  let x = nx;
+  let y = ny;
+  const rot = idx & 3;
+  if (rot === 1) {
+    const t = x;
+    x = y;
+    y = 1 - t;
+  } else if (rot === 2) {
+    x = 1 - x;
+    y = 1 - y;
+  } else if (rot === 3) {
+    const t = x;
+    x = 1 - y;
+    y = t;
+  }
+  if (idx & 4) x = 1 - x;
+  return { x, y };
+}
 
 const stateColor: Record<FitState, string> = {
   idle: colors.idle,
@@ -53,6 +71,8 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
   const circleRef = useRef(circle);
   circleRef.current = circle;
   const wasGood = useRef(false);
+  const orientRef = useRef(settings.orientIdx);
+  orientRef.current = settings.orientIdx;
 
   // 정렬 계산 루프 (~11fps): 검출 결과 + 원 위치로 fit/힌트 산출
   useEffect(() => {
@@ -69,15 +89,8 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
         setFit({ score: 0, state: 'idle', hint: '' });
         return;
       }
-      let nx = s.nx;
-      let ny = s.ny;
-      if (ORIENT.rotate) {
-        const t = nx;
-        nx = ny;
-        ny = 1 - t;
-      }
-      if (ORIENT.mirror) nx = 1 - nx;
-      const subj = { px: nx * width, py: ny * height, pr: s.nr * Math.min(width, height) };
+      const mapped = orient(s.nx, s.ny, orientRef.current);
+      const subj = { px: mapped.x * width, py: mapped.y * height, pr: s.nr * Math.min(width, height) };
       const f = computeFit({ cx: c.cx, cy: c.cy, r: c.r }, subj);
       const dx = subj.px - c.cx;
       const dy = subj.py - c.cy;
@@ -163,7 +176,14 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
 
       {/* 상단 HUD */}
       <View style={[styles.hud, { top: insets.top + space.sm }]} pointerEvents="box-none">
-        <Pill label={ratios[ratioIdx].label} />
+        <View style={styles.hudLeft}>
+          <Pill label={ratios[ratioIdx].label} />
+          {guide && (
+            <Pressable onPress={() => update({ orientIdx: (settings.orientIdx + 1) % 8 })}>
+              <Pill label={`방향 ${settings.orientIdx}`} />
+            </Pressable>
+          )}
+        </View>
         {guide && fit.state !== 'idle' && (
           <Pill label={`${Math.round(fit.score * 100)}%`} tone={fit.state === 'good' ? 'accent' : undefined} />
         )}
@@ -180,7 +200,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit, settings, upda
             <RoundIconButton icon="◎" active={guide} onPress={() => update({ guide: !guide })} />
             <RoundIconButton icon="⟲" onPress={() => setPosition((p) => (p === 'back' ? 'front' : 'back'))} />
           </View>
-          <Tip>원을 끌어 위치 · 핀치/핸들로 크기 · ◎ 정렬 가이드 · 가운데로 촬영</Tip>
+          <Tip>원 끌어 위치 · 핀치/핸들 크기 · ◎ 가이드 · 화살표가 반대면 상단 '방향' 탭</Tip>
         </BlurBar>
         <View style={styles.loadRow}>
           <PillButton label="🖼  갤러리에서 보정" onPress={openLibrary} />
@@ -197,6 +217,7 @@ const styles = StyleSheet.create({
   permSub: { color: colors.textDim, fontSize: 14, textAlign: 'center' },
   bar: { position: 'absolute', left: 0, right: 0, backgroundColor: '#000' },
   hud: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  hudLeft: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.lg, alignItems: 'center', gap: space.md },
   controlBar: { width: '100%', borderRadius: 22, borderWidth: 1, borderColor: colors.hair, paddingHorizontal: space.lg, paddingVertical: space.lg },
   ctrlRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
