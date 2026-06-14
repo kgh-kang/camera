@@ -2,12 +2,22 @@
   "expo": {
     "name": "Circle Camera",
     "slug": "circle-camera",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "scheme": "circlecamera",
+    "backgroundColor": "#0E0F13",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E0F13"
+    },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
+      "buildNumber": "1",
       "bundleIdentifier": "com.circlecamera.app",
       "infoPlist": {
         "NSCameraUsageDescription": "원 안에 피사체를 맞춰 촬영하기 위해 카메라를 사용합니다.",
@@ -17,6 +27,11 @@
     },
     "android": {
       "package": "com.circlecamera.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0E0F13"
+      },
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES"

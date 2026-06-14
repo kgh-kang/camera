@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -11,12 +12,15 @@ import CircleOverlay from '../components/CircleOverlay';
 import { BlurBar, Pill, PillButton, RoundIconButton, Shutter, Tip } from '../components/ui';
 import { computeFit, type FitState } from '../lib/match';
 import { useCircle } from '../lib/useCircle';
+import type { Settings } from '../lib/useSettings';
 import { useSubjectDetector } from '../lib/useSubjectDetector';
 import { colors, ratios, space } from '../theme';
 
 interface Props {
   onCaptured: (uri: string) => void;
   onPickForEdit: (uri: string) => void;
+  settings: Settings;
+  update: (patch: Partial<Settings>) => void;
 }
 
 // 프레임 좌표 → 화면 좌표 보정 (실기기에서 회전/미러 느낌이면 여기만 바꾸면 됨)
@@ -28,14 +32,12 @@ const stateColor: Record<FitState, string> = {
   good: colors.good,
 };
 
-export default function CameraScreen({ onCaptured, onPickForEdit }: Props) {
+export default function CameraScreen({ onCaptured, onPickForEdit, settings, update }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { hasPermission, requestPermission } = useCameraPermission();
   const [position, setPosition] = useState<'back' | 'front'>('back');
-  const [grid, setGrid] = useState(false);
-  const [ratioIdx, setRatioIdx] = useState(0);
-  const [guide, setGuide] = useState(true);
+  const { grid, ratioIdx, guide } = settings;
   const [fit, setFit] = useState<{ score: number; state: FitState; hint: string }>({
     score: 0,
     state: 'idle',
@@ -50,10 +52,12 @@ export default function CameraScreen({ onCaptured, onPickForEdit }: Props) {
   // circle은 매 렌더 새 객체 → ref로 고정해 인터벌 재생성을 막는다
   const circleRef = useRef(circle);
   circleRef.current = circle;
+  const wasGood = useRef(false);
 
   // 정렬 계산 루프 (~11fps): 검출 결과 + 원 위치로 fit/힌트 산출
   useEffect(() => {
     if (!guide) {
+      wasGood.current = false;
       setFit({ score: 0, state: 'idle', hint: '' });
       return;
     }
@@ -61,6 +65,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit }: Props) {
       const s = subjectRef.current;
       const c = circleRef.current.snapshot();
       if (!s) {
+        wasGood.current = false;
         setFit({ score: 0, state: 'idle', hint: '' });
         return;
       }
@@ -79,6 +84,10 @@ export default function CameraScreen({ onCaptured, onPickForEdit }: Props) {
       let hint = '';
       if (f.state === 'good') hint = '✓';
       else if (Math.hypot(dx, dy) > c.r * 0.18) hint = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? '→' : '←') : dy > 0 ? '↓' : '↑';
+      if (f.state === 'good' && !wasGood.current) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+      wasGood.current = f.state === 'good';
       setFit({ score: f.score, state: f.state, hint });
     }, 90);
     return () => clearInterval(id);
@@ -107,6 +116,7 @@ export default function CameraScreen({ onCaptured, onPickForEdit }: Props) {
   const color = stateColor[fit.state];
 
   const onShutter = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     try {
       const photo = await cameraRef.current?.takePhoto({ flash: 'off' });
       if (photo?.path) onCaptured(photo.path.startsWith('file://') ? photo.path : `file://${photo.path}`);
@@ -164,10 +174,10 @@ export default function CameraScreen({ onCaptured, onPickForEdit }: Props) {
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }]} pointerEvents="box-none">
         <BlurBar style={[styles.controlBar]}>
           <View style={styles.ctrlRow}>
-            <RoundIconButton icon="▦" active={grid} onPress={() => setGrid((g) => !g)} />
-            <RoundIconButton icon="⤢" onPress={() => setRatioIdx((i) => (i + 1) % ratios.length)} />
+            <RoundIconButton icon="▦" active={grid} onPress={() => update({ grid: !grid })} />
+            <RoundIconButton icon="⤢" onPress={() => update({ ratioIdx: (ratioIdx + 1) % ratios.length })} />
             <Shutter onPress={onShutter} />
-            <RoundIconButton icon="◎" active={guide} onPress={() => setGuide((g) => !g)} />
+            <RoundIconButton icon="◎" active={guide} onPress={() => update({ guide: !guide })} />
             <RoundIconButton icon="⟲" onPress={() => setPosition((p) => (p === 'back' ? 'front' : 'back'))} />
           </View>
           <Tip>원을 끌어 위치 · 핀치/핸들로 크기 · ◎ 정렬 가이드 · 가운데로 촬영</Tip>

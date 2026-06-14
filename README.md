@@ -13,10 +13,11 @@
 
 ## 현재 상태
 
-- 단계: **M1 + L2 구현 (React Native)** — 카메라·원 오버레이·수동촬영·후보정 + 실시간 정렬 가이드
-- 플랫폼: **iOS · Android 공용** — React Native (Expo) + vision-camera
-- 디자인: **투톤(다크 잉크 + 민트 액센트)**
-- 다음: 실기기 빌드 검증 + L2 인식 튜닝
+- 단계: **출시 준비 (Release-ready)** — 기능·디자인·온보딩·법무·스토어·CI까지 정리
+- 기능: 카메라·원 오버레이·실시간 정렬 가이드(L2)·수동촬영·후보정·설정저장·햅틱·온보딩
+- 플랫폼: **iOS · Android 공용** — React Native (Expo) + vision-camera, 투톤 디자인
+- 검증: `tsc --noEmit` 0 에러, 유닛 테스트 통과 (CI: GitHub Actions)
+- 남은 일: **실기기 빌드/QA·스토어 제출** (→ [docs/RELEASE.md](docs/RELEASE.md))
 
 ## 실행 (요약)
 
@@ -32,10 +33,13 @@ npx expo run:ios       # 아이폰 (Mac 필요)
 ## 문서
 
 - [docs/BUILD.md](docs/BUILD.md) — iPhone·Galaxy 빌드/실행 가이드
-- [docs/mockup.html](docs/mockup.html) — 인터랙티브 UI 목업 + 기능 설명
+- [docs/RELEASE.md](docs/RELEASE.md) — 출시 체크리스트
 - [docs/DESIGN.md](docs/DESIGN.md) — 제품/기술 설계 전체
-- [docs/COMPETITORS.md](docs/COMPETITORS.md) — 기존 앱·기능 조사 및 차별점
 - [docs/ROADMAP.md](docs/ROADMAP.md) — 단계별 범위(L1→L2→L3)와 마일스톤
+- [docs/COMPETITORS.md](docs/COMPETITORS.md) — 기존 앱·기능 조사 및 차별점
+- [docs/mockup.html](docs/mockup.html) — 인터랙티브 UI 목업 + 기능 설명
+- [docs/legal/PRIVACY.md](docs/legal/PRIVACY.md) · [docs/legal/TERMS.md](docs/legal/TERMS.md) — 개인정보처리방침·약관(KR/EN)
+- [store/LISTING.md](store/LISTING.md) · [store/ASO.md](store/ASO.md) · [store/SCREENSHOTS.md](store/SCREENSHOTS.md) — 스토어 등록 문구·ASO·스크린샷 플랜
 
 ## 코드 구조
 
@@ -46,11 +50,15 @@ src/screens/CameraScreen      프리뷰 + 원 오버레이 + 정렬 가이드 + 
 src/screens/PreviewScreen     촬영 결과 저장/공유/후보정 이동
 src/screens/EditScreen        사진 불러와 원 프레이밍·비네팅 → 내보내기
 src/components/CircleOverlay   드래그·핀치 원 + 정렬 게이지(SVG+Reanimated), 공용
+src/screens/OnboardingScreen   첫 실행 안내 + 카메라 권한 프라이밍
 src/components/ui.tsx          투톤 UI 컴포넌트(BlurBar/Pill/Button/Shutter)
 src/lib/useCircle.ts          원 위치·크기 상태 + 제스처(공유)
 src/lib/useSubjectDetector.ts L2 실시간 피사체 검출(vision-camera frame processor)
+src/lib/useSettings.ts        설정 영속화(AsyncStorage)
 src/lib/match.ts              정렬 fit 계산
 src/theme.ts                  디자인 토큰(투톤)·비율 상수
+scripts/gen-assets.js         아이콘·스플래시 생성(sharp)
+tests/match.test.ts           정렬 계산 유닛 테스트
 ```
 
 ## 핵심 차별점
