@@ -58,7 +58,7 @@ export default function CircleOverlay({
       cx: cx.value,
       cy: cy.value,
       r: rr,
-      strokeDasharray: c,
+      strokeDasharray: [c, c],
       strokeDashoffset: c * (1 - frac.value),
     };
   });
