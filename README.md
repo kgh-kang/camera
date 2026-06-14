@@ -13,9 +13,10 @@
 
 ## 현재 상태
 
-- 단계: **M1 구현 (React Native)** — 카메라+원 오버레이+수동촬영+후보정
-- 플랫폼: **iOS · Android 공용** — React Native (Expo) + react-native-vision-camera
-- 다음: L2 정렬 가이드(원 주변 ROI 실시간 인식)
+- 단계: **M1 + L2 구현 (React Native)** — 카메라·원 오버레이·수동촬영·후보정 + 실시간 정렬 가이드
+- 플랫폼: **iOS · Android 공용** — React Native (Expo) + vision-camera
+- 디자인: **투톤(다크 잉크 + 민트 액센트)**
+- 다음: 실기기 빌드 검증 + L2 인식 튜닝
 
 ## 실행 (요약)
 
@@ -39,14 +40,17 @@ npx expo run:ios       # 아이폰 (Mac 필요)
 ## 코드 구조
 
 ```
-App.tsx                    화면 전환(camera/preview/edit)
-index.ts                   진입점
-src/screens/CameraScreen   프리뷰 + 원 오버레이 + 수동 셔터
-src/screens/PreviewScreen  촬영 결과 저장/공유/후보정 이동
-src/screens/EditScreen     사진 불러와 원 프레이밍·비네팅 → 내보내기
-src/components/CircleOverlay  드래그·핀치 원(SVG + Reanimated), 공용
-src/lib/match.ts           정렬 fit 계산 (L2에서 사용)
-src/theme.ts               색·비율 상수
+App.tsx                       화면 전환(camera/preview/edit)
+index.ts                      진입점
+src/screens/CameraScreen      프리뷰 + 원 오버레이 + 정렬 가이드 + 수동 셔터
+src/screens/PreviewScreen     촬영 결과 저장/공유/후보정 이동
+src/screens/EditScreen        사진 불러와 원 프레이밍·비네팅 → 내보내기
+src/components/CircleOverlay   드래그·핀치 원 + 정렬 게이지(SVG+Reanimated), 공용
+src/components/ui.tsx          투톤 UI 컴포넌트(BlurBar/Pill/Button/Shutter)
+src/lib/useCircle.ts          원 위치·크기 상태 + 제스처(공유)
+src/lib/useSubjectDetector.ts L2 실시간 피사체 검출(vision-camera frame processor)
+src/lib/match.ts              정렬 fit 계산
+src/theme.ts                  디자인 토큰(투톤)·비율 상수
 ```
 
 ## 핵심 차별점

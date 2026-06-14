@@ -2,35 +2,27 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import React, { useRef, useState } from 'react';
-import {
-  Alert,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Alert, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import CircleOverlay from '../components/CircleOverlay';
-import { colors } from '../theme';
+import { BlurBar, PillButton } from '../components/ui';
+import { useCircle } from '../lib/useCircle';
+import { colors, space } from '../theme';
 
 interface Props {
   uri: string | null;
   onBack: () => void;
 }
 
-/**
- * 후보정: 사진 위에 원 프레이밍 + 원 밖 어둡게(비네팅) 효과 → 내보내기.
- * 합성은 ViewShot로 화면(이미지+오버레이)을 캡처해 새 이미지로 저장한다.
- */
+/** 후보정: 사진 위에 원 프레이밍 + 비네팅(원 밖 어둡게) → ViewShot로 합성 후 내보내기. */
 export default function EditScreen({ uri, onBack }: Props) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [photo, setPhoto] = useState<string | null>(uri);
   const [vignette, setVignette] = useState(true);
   const shotRef = useRef<View>(null);
+  const circle = useCircle(width, height);
 
   const pick = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -65,12 +57,8 @@ export default function EditScreen({ uri, onBack }: Props) {
       <View style={styles.center}>
         <Text style={styles.title}>후보정할 사진 선택</Text>
         <Text style={styles.sub}>갤러리에서 사진을 불러와 원 프레이밍을 입혀보세요.</Text>
-        <TouchableOpacity style={styles.primary} onPress={pick}>
-          <Text style={styles.primaryTxt}>사진 불러오기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.ghost} onPress={onBack}>
-          <Text style={styles.ghostTxt}>← 카메라로</Text>
-        </TouchableOpacity>
+        <PillButton label="사진 불러오기" variant="primary" onPress={pick} />
+        <PillButton label="← 카메라로" onPress={onBack} />
       </View>
     );
   }
@@ -79,53 +67,37 @@ export default function EditScreen({ uri, onBack }: Props) {
     <View style={styles.root}>
       <View ref={shotRef} collapsable={false} style={StyleSheet.absoluteFill}>
         <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} resizeMode="contain" />
-        <CircleOverlay width={width} height={height} vignette={vignette} color="#fff" />
+        <CircleOverlay width={width} height={height} circle={circle} vignette={vignette} color={colors.white} />
       </View>
 
-      <View style={[styles.controls, { paddingBottom: insets.bottom + 18, paddingTop: insets.top + 10 }]} pointerEvents="box-none">
-        <View style={styles.row}>
-          <Btn label="← 카메라" onPress={onBack} />
-          <Btn label={vignette ? '◑ 비네팅 ON' : '○ 비네팅 OFF'} active={vignette} onPress={() => setVignette((v) => !v)} />
-          <Btn label="다른 사진" onPress={pick} />
-          <Btn label="공유" onPress={() => exportImage('share')} />
-          <Btn label="저장" primary onPress={() => exportImage('save')} />
-        </View>
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }]} pointerEvents="box-none">
+        <BlurBar style={styles.bar}>
+          <View style={styles.row}>
+            <PillButton label="← 카메라" onPress={onBack} flex />
+            <PillButton
+              label={vignette ? '◑ 비네팅' : '○ 비네팅'}
+              variant={vignette ? 'active' : 'ghost'}
+              onPress={() => setVignette((v) => !v)}
+              flex
+            />
+            <PillButton label="다른 사진" onPress={pick} flex />
+          </View>
+          <View style={[styles.row, { marginTop: space.sm }]}>
+            <PillButton label="공유" onPress={() => exportImage('share')} flex />
+            <PillButton label="저장" variant="primary" onPress={() => exportImage('save')} flex />
+          </View>
+        </BlurBar>
       </View>
     </View>
   );
 }
 
-function Btn({
-  label,
-  onPress,
-  primary,
-  active,
-}: {
-  label: string;
-  onPress: () => void;
-  primary?: boolean;
-  active?: boolean;
-}) {
-  return (
-    <TouchableOpacity style={[styles.btn, primary && styles.btnPrimary, active && styles.btnActive]} onPress={onPress}>
-      <Text style={[styles.btnTxt, primary && { color: '#062018' }]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
-  center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  title: { color: colors.txt, fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  sub: { color: colors.mut, fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  primary: { backgroundColor: colors.accent, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, marginBottom: 12 },
-  primaryTxt: { color: '#062018', fontWeight: '700' },
-  ghost: { paddingVertical: 10 },
-  ghostTxt: { color: colors.mut, fontSize: 14 },
-  controls: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
-  btn: { flex: 1, paddingVertical: 11, borderRadius: 11, borderWidth: 1, borderColor: colors.line, alignItems: 'center', backgroundColor: colors.panel },
-  btnPrimary: { backgroundColor: colors.accent, borderColor: 'transparent' },
-  btnActive: { backgroundColor: 'rgba(67,214,163,0.25)' },
-  btnTxt: { color: colors.txt, fontSize: 12, fontWeight: '600' },
+  center: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 12 },
+  title: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  sub: { color: colors.textDim, fontSize: 14, textAlign: 'center', marginBottom: 8 },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.lg },
+  bar: { borderRadius: 22, borderWidth: 1, borderColor: colors.hair, padding: space.lg },
+  row: { flexDirection: 'row', gap: space.sm },
 });
