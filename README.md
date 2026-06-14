@@ -19,6 +19,7 @@
 
 ## 문서
 
+- [docs/mockup.html](docs/mockup.html) — 인터랙티브 UI 목업(원 드래그·정렬 게이지·후보정 모드) + 기능 설명
 - [docs/DESIGN.md](docs/DESIGN.md) — 제품/기술 설계 전체
 - [docs/COMPETITORS.md](docs/COMPETITORS.md) — 기존 앱·기능 조사 및 차별점
 - [docs/ROADMAP.md](docs/ROADMAP.md) — 단계별 범위(L1→L2→L3)와 마일스톤
